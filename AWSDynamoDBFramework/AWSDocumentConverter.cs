@@ -143,11 +143,7 @@ namespace AWSDynamoDBFramework
                 var propertyType = classPropertyInfo.PropertyType;
                 classObject = Activator.CreateInstance(propertyType);
             }
-            
-
-
             string namespacetest = $"{thisNamespace}.{thisType}";
-            //var classObject3 = Activator.CreateInstance(Type.GetType($"{thisNamespace}.{thisType}"));
 
             if (document != null)
                 foreach (var entry in document)
