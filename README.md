@@ -87,7 +87,7 @@ ddbc.BatchInsert(persons);
 ~~~~~~.NET
 // Get a list of all person with age greater than 30.
 ScanFilterCondition sfc = new ScanFilterCondition("Age", ScanOperator.GreaterThan, 30);
-var result = ddbc.Scan(new List<ScanFilterCondition>() {sfc}).ToList();
+var result = ddbc.Scan<Person>(new List<ScanFilterCondition>() {sfc}).ToList();
 ~~~~~~
 
 ~~~~~~.NET
