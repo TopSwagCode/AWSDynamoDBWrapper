@@ -49,6 +49,9 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AWSDocumentConverter.cs" />
+    <Compile Include="AWSDynamoDBStream.cs" />
+    <Compile Include="AWSDynamoDBTable.cs" />
+    <Compile Include="AWSDynamoTableConfig.cs" />
     <Compile Include="DynamoDBContext.cs" />
     <Compile Include="ScanFilterCondition.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

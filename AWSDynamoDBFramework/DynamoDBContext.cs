@@ -11,32 +11,58 @@ using Amazon.DynamoDBv2.DocumentModel;
 using Amazon.DynamoDBv2.Model;
 using Amazon.Runtime;
 using Expression = Amazon.DynamoDBv2.DocumentModel.Expression;
+using System.Threading;
 
 namespace AWSDynamoDBFramework
 {
     public class DynamoDBContext
     {
-        private static AmazonDynamoDBClient client;
+        private AmazonDynamoDBClient client;
         private Table dynamoDBTable;
-        private string _tableName;
-        private string _idField;
+        public AWSDynamoTableConfig AWSDynamoTableConfig { get; set; }
+        public List<AWSDocumentConverter> StartupData { get; private set; }
+        public AWSDynamoDBTable AWSDynamoDBTable { get; set; }
+        private BasicAWSCredentials BasicAWSCredentials { get; set; }
+        private RegionEndpoint RegionEndpoint { get; set; }
 
-        public DynamoDBContext(string tableName, RegionEndpoint regionEndpoint, string accessKey, string secretKey, string idField = "Id")
+        public DynamoDBContext(RegionEndpoint regionEndpoint, string accessKey, string secretKey, AWSDynamoTableConfig tableConfig, List<AWSDocumentConverter> startupData = null)
         {
-            client = new AmazonDynamoDBClient(
-            new BasicAWSCredentials(accessKey, secretKey),
-            new AmazonDynamoDBConfig() { RegionEndpoint = regionEndpoint });
-            dynamoDBTable = Table.LoadTable(client, tableName);
-            this._tableName = tableName;
-            this._idField = idField;
+            this.BasicAWSCredentials = new BasicAWSCredentials(accessKey, secretKey);
+            this.RegionEndpoint = regionEndpoint;
+            this.client = new AmazonDynamoDBClient( new BasicAWSCredentials(accessKey, secretKey), new AmazonDynamoDBConfig() { RegionEndpoint = regionEndpoint });
+            this.AWSDynamoTableConfig = tableConfig;
+            this.StartupData = startupData;
+
+            initiateTable();
         }
 
-        public DynamoDBContext(string tableName, BasicAWSCredentials credentials, RegionEndpoint regionEndpoint)
+        public DynamoDBContext(BasicAWSCredentials credentials, RegionEndpoint regionEndpoint, AWSDynamoTableConfig tableConfig, List<AWSDocumentConverter> startupData = null)
         {
-            client = new AmazonDynamoDBClient(credentials,
-            new AmazonDynamoDBConfig() { RegionEndpoint = regionEndpoint });
-            dynamoDBTable = Table.LoadTable(client, tableName);
-            this._tableName = tableName;
+            this.BasicAWSCredentials = credentials;
+            this.RegionEndpoint = regionEndpoint;
+            this.client = new AmazonDynamoDBClient(credentials, new AmazonDynamoDBConfig() { RegionEndpoint = regionEndpoint });
+            this.AWSDynamoTableConfig = tableConfig;
+            this.StartupData = startupData;
+
+            initiateTable();
+        }
+
+        private void initiateTable()
+        {
+            // Check if Table exists
+            AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits);
+            
+            // Create table if not
+            var createNewDynamoDB = !AWSDynamoDBTable.TableExists();
+            if (createNewDynamoDB)
+                AWSDynamoDBTable.ExecuteCreateTable(true); // Wait for table to be created.
+
+            // Load table
+            dynamoDBTable = Table.LoadTable(client, AWSDynamoTableConfig.TableName);
+
+            // Load startup data
+            if (createNewDynamoDB && StartupData != null && StartupData.Count > 0)
+                BatchInsert(StartupData);
         }
 
 
@@ -164,7 +190,7 @@ namespace AWSDynamoDBFramework
                 scanOperationConfig.AttributesToGet = attributesToGet;
 
             Search search = dynamoDBTable.Scan(scanOperationConfig);
-
+            
             List<Document> documentList = new List<Document>();
             do
             {
@@ -190,10 +216,10 @@ namespace AWSDynamoDBFramework
         {
             var request = new UpdateItemRequest
             {
-                TableName = _tableName,
+                TableName = AWSDynamoTableConfig.TableName,
                 Key = new Dictionary<string, AttributeValue>
                 {
-                    { _idField, new AttributeValue { S = id } }
+                    { AWSDynamoTableConfig.KeyName, new AttributeValue { S = id } }
                 },
                 AttributeUpdates = new Dictionary<string, AttributeValueUpdate>()
                 {
@@ -239,7 +265,6 @@ namespace AWSDynamoDBFramework
 
         }
 
-
         public void Query()
         {
             /*
@@ -252,5 +277,11 @@ namespace AWSDynamoDBFramework
             
             throw new NotImplementedException("Not implemented");
         }
+
+        public AWSDynamoDBStream GetAWSDynamoDBStream(AWSDynamoDBIteratorType type)
+        {
+            return new AWSDynamoDBStream(this.BasicAWSCredentials, this.RegionEndpoint, this.AWSDynamoTableConfig.TableName, type);
+        }
+        
     }
 }
