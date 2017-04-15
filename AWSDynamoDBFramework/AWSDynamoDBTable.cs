@@ -13,8 +13,8 @@ namespace AWSDynamoDBFramework
         private string TableName { get; set; }
         private Type KeyType { get; set; }
         private string KeyName { get; set; }
-        private int ReadCapacityUnits { get; set; }
-        private int WriteCapacityUnits { get; set; }
+        public int ReadCapacityUnits { get; set; }
+        public int WriteCapacityUnits { get; set; }
 
         private AmazonDynamoDBClient client;
 
@@ -33,7 +33,7 @@ namespace AWSDynamoDBFramework
             var test = client.UpdateTable(new UpdateTableRequest()
             {
                 TableName = this.TableName,
-                ProvisionedThroughput = new ProvisionedThroughput(15, 15)
+                ProvisionedThroughput = new ProvisionedThroughput(ReadCapacityUnits, WriteCapacityUnits)
             });
             var test2 = test.ResponseMetadata;
         }

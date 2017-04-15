@@ -1,7 +1,18 @@
 # AWSDynamoDBWrapper
 
 A small project for making the use of DynamoDB in .NET projects easier.    
-After looking at the [AWS Mapping example](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBContext.ArbitraryDataMapping.html) I thougt there had to be an easier way.    
+After looking at the [AWS Mapping example](http://docs.aws.amazon.com/amazondynamodb/latest/developerguide/DynamoDBContext.ArbitraryDataMapping.html) I thougt there had to be an easier way.  
+I have created this small AWS DynamoDB Wrapper for making developent easier.   
+Have allready implemented alot of DynamoDB features.      
+
+UPDATE! We now support updating of Read/WriteCapacityUnits.
+
+UPDATE! We now support DynamoDB Streams.     
+     
+![Stream](stream.gif)
+    
+Top console is the dynamodb stream fetching new event every 5 seconds.    
+Bottom console is datapump project inserting new person every second.
 
 In the sample project I have a data structure looking like this:
 
@@ -100,3 +111,33 @@ ddbc.AtomicCounter("uniqueid", "Age", -21);
 // Conditional Update in DynamoDB. Eg. only update if Person Father's Mother's Father name is "Troels" (great-grandfather name).
 ddbc.ConditionalUpdate(person, "Father.Mother.Father.Name", "Troels");
 ~~~~~~
+
+~~~~~~.NET
+// DynamoDB Stream getting all events (Delete, Update, Insert).
+// Note this example, gets the NewImage, which will fail if you are deleteing objects. (Nullpointer exception).
+// The stream is smart and remembers which Sequence last scanned, and follows up where it left of.
+var stream = ddbc.GetAWSDynamoDBStream(AWSDynamoDBIteratorType.LATEST);
+
+while (true)
+{
+    Thread.Sleep(5000);
+    var records = stream.GetRecords();
+    foreach (var record in records)
+    {
+        Console.WriteLine("EventName: " +record.EventName + " || Person ID: " + record.Dynamodb.NewImage["Id"].S + " || SequenceNumber: " + record.Dynamodb.SequenceNumber);
+    }
+}
+~~~~~~
+
+~~~~~~.NET
+// Updating Read/WriteCapacityUnits for your DynamoDB (Eg. Needing more or less performance)
+ddbc.AWSDynamoDBTable.ReadCapacityUnits = 15;
+ddbc.AWSDynamoDBTable.WriteCapacityUnits = 15;
+ddbc.AWSDynamoDBTable.UpdateTable();
+~~~~~~
+
+
+Joshua Jesper Krægpørh Ryder.
+Software developer at First Agenda (Århus Denmark.)
+
+Contact me at Josh@TopSwagCode.com

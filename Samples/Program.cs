@@ -41,6 +41,8 @@ namespace Samples
 
         public static void UpdateTable(DynamoDBContext ddbc)
         {
+            ddbc.AWSDynamoDBTable.ReadCapacityUnits = 15;
+            ddbc.AWSDynamoDBTable.WriteCapacityUnits = 15;
             ddbc.AWSDynamoDBTable.UpdateTable();
         }
 
@@ -56,7 +58,7 @@ namespace Samples
                 var records = stream.GetRecords();
                 foreach (var record in records)
                 {
-                    Console.WriteLine(record.EventName + " : " + record.Dynamodb.SequenceNumber);
+                    Console.WriteLine("EventName: " +record.EventName + " || Person ID: " + record.Dynamodb.NewImage["Id"].S + " || SequenceNumber: " + record.Dynamodb.SequenceNumber);
                 }
             }
         }
