@@ -9,13 +9,13 @@ using Amazon.DynamoDBv2.DocumentModel;
 
 namespace AWSDynamoDBFramework
 {
-    public abstract class AWSDocumentConverter
+    public class AWSDocumentConverter
     {
-        public Document ToDocument(bool removeNulls = true, bool removeZeros = true)
+        public static Document ToDocument<T>(T tObject, bool removeNulls = true, bool removeZeros = true)
         {
-            var dictionary = this.GetType()
+            var dictionary = tObject.GetType()
                 .GetProperties(BindingFlags.Instance | BindingFlags.Public)
-                .ToDictionary(prop => prop.Name, prop => prop.GetValue(this, null));
+                .ToDictionary(prop => prop.Name, prop => prop.GetValue(tObject, null));
             if (removeNulls)
                 dictionary = dictionary.Where(x => x.Value != null).ToDictionary(y => y.Key, y => y.Value);
 
@@ -31,7 +31,7 @@ namespace AWSDynamoDBFramework
 
                 if (type == typeof(List<Object>))
                 {
-                    Console.WriteLine("WE HAVE A LIST");
+                    Console.WriteLine("WE HAVE A LIST"); // Look away. Nothing to see here. Please stop reading. Come on.... DO you feel better for reading this? Was it worth your time? Really have nothing better to do?                                                          COME ON. IT's Done. Nothing left. I promise. Not like there is any gold at the end of this comment. Please go on. We both have better things to be doing right now. I could be writting alot of usefull code, but instead we are both stuck reading this comment. Hope your happy now. I am not stopping before you are! Wonder if anyone is still reading. Not like anything usefull is coming later. Wonder how many skipped the first part. Please just go on with your day / night. THIS AINT OVER TO I SAY IT'S OVER!
                 }
 
                 if (type == typeof(string))
@@ -83,7 +83,7 @@ namespace AWSDynamoDBFramework
                 {
                     document.Add(entry.Key, (uint)entry.Value);
                 }
-                else if (type.BaseType != null && type.BaseType.IsAssignableFrom(typeof(AWSDocumentConverter)))
+                else if (type.BaseType != null && type.BaseType.IsAssignableFrom(typeof(T)))
                 {
                     if (type.BaseType == typeof(Object) && type.Name == "List`1") // If is list
                     {
@@ -92,16 +92,16 @@ namespace AWSDynamoDBFramework
                         if (genericList != null)
                             foreach (var test in genericList)
                             {
-                                var dbEntry = test as AWSDocumentConverter;
-                                if (dbEntry != null) dynamoDbList.Add(dbEntry.ToDocument(removeNulls));
+                                var dbEntry = test;
+                                if (dbEntry != null) dynamoDbList.Add(AWSDocumentConverter.ToDocument(dbEntry, removeNulls));
                             }
 
                         document.Add(entry.Key, dynamoDbList);
                     }
-                    else if (type.BaseType == typeof(AWSDocumentConverter)) // Of Class uses AWSDocumentConverter
+                    else if (type.BaseType != null)
                     {
-                        var docEntry = entry.Value as AWSDocumentConverter;
-                        if (docEntry != null) document.Add(entry.Key, docEntry.ToDocument(removeNulls));
+                        var docEntry = entry.Value;
+                        if (docEntry != null) document.Add(entry.Key, AWSDocumentConverter.ToDocument(docEntry, removeNulls));
                     }
                 }
             }
@@ -109,17 +109,23 @@ namespace AWSDynamoDBFramework
         }
 
 
-        private PropertyInfo TestObjects(string key, Type test)
+        private static PropertyInfo TestObjects(string key, Type test)
         {
             var propertyinfo = test.GetProperties().SingleOrDefault(x => x.Name == key);
 
             return propertyinfo;
         }
 
-        public object ToObject(Document document, string className = "", string classNamespace = "")
+        public static T ToObject<T>(Document document, string className = "", string classNamespace = "")
         {
-            var thisType = !string.IsNullOrEmpty(className) ? className : this.GetType().Name;
-            var thisNamespace = !string.IsNullOrEmpty(classNamespace) ? classNamespace : this.GetType().Namespace;
+            return (T)ToObjectTest<T>(document, className, classNamespace);
+
+        }
+
+        private static object ToObjectTest<T>(Document document, string className = "", string classNamespace = "")
+        {
+            var thisType = !string.IsNullOrEmpty(className) ? className : typeof(T).Name;
+            var thisNamespace = !string.IsNullOrEmpty(classNamespace) ? classNamespace : typeof(T).Namespace;
 
             Type t = AppDomain.CurrentDomain.GetAssemblies()
                                 .SelectMany(a => a.GetTypes())
@@ -130,9 +136,9 @@ namespace AWSDynamoDBFramework
                                 .SelectMany(a => a.GetTypes())
                                 .Where(qt => qt.Name == className).ToList();
 
-            var classObject2 = t != null ? t : Activator.CreateInstance(this.GetType());
+            var classObject2 = t != null ? t : Activator.CreateInstance(typeof(T));
             
-            var classObject = Activator.CreateInstance(this.GetType());
+            var classObject = Activator.CreateInstance(typeof(T));
             var classPropertyInfo = classObject.GetType().GetProperties().FirstOrDefault(x => x.Name == className);
             
             // If className is a property. Use this class instead.
@@ -212,7 +218,7 @@ namespace AWSDynamoDBFramework
                                 foreach (var dbEntry in dynamoDbList.Entries)
                                 {
                                     var tmpDoc = dbEntry as Document;
-                                    var subObject = this.ToObject(tmpDoc, subClassName);
+                                    var subObject = AWSDocumentConverter.ToObjectTest<T>(tmpDoc, subClassName);
                                     addMethod.Invoke(list, new object[] { subObject });
                                 }
 
@@ -222,7 +228,7 @@ namespace AWSDynamoDBFramework
                             else if (valueType == typeof(Document))
                             {
                                 var tmpDoc = entry.Value as Document;
-                                var subDocuement = this.ToObject(tmpDoc, propertyInfo.PropertyType.Name,
+                                var subDocuement = AWSDocumentConverter.ToObjectTest<T>(tmpDoc, propertyInfo.PropertyType.Name,
                                     propertyInfo.PropertyType.Namespace);
                                 propertyInfo.SetValue(classObject, subDocuement);
                             }

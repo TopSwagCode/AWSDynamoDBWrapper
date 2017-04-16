@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Samples.PersonModel
 {
-    public class Pet : AWSDocumentConverter
+    public class Pet
     {
         public string Name { get; set; }
         public int Age { get; set; }

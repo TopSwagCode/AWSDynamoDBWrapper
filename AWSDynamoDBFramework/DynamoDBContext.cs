@@ -24,6 +24,7 @@ namespace AWSDynamoDBFramework
         public AWSDynamoDBTable AWSDynamoDBTable { get; set; }
         private BasicAWSCredentials BasicAWSCredentials { get; set; }
         private RegionEndpoint RegionEndpoint { get; set; }
+        private AWSDocumentConverter AWSDocumentConverter { get; set; }
 
         public DynamoDBContext(RegionEndpoint regionEndpoint, string accessKey, string secretKey, AWSDynamoTableConfig tableConfig, List<AWSDocumentConverter> startupData = null)
         {
@@ -32,6 +33,7 @@ namespace AWSDynamoDBFramework
             this.client = new AmazonDynamoDBClient( new BasicAWSCredentials(accessKey, secretKey), new AmazonDynamoDBConfig() { RegionEndpoint = regionEndpoint });
             this.AWSDynamoTableConfig = tableConfig;
             this.StartupData = startupData;
+            this.AWSDocumentConverter = new AWSDocumentConverter();
 
             initiateTable();
         }
@@ -43,6 +45,7 @@ namespace AWSDynamoDBFramework
             this.client = new AmazonDynamoDBClient(credentials, new AmazonDynamoDBConfig() { RegionEndpoint = regionEndpoint });
             this.AWSDynamoTableConfig = tableConfig;
             this.StartupData = startupData;
+            this.AWSDocumentConverter = new AWSDocumentConverter();
 
             initiateTable();
         }
@@ -66,9 +69,9 @@ namespace AWSDynamoDBFramework
         }
 
 
-        public void Insert(AWSDocumentConverter tObject)
+        public void Insert<T>(T tObject)
         {
-            var document = tObject.ToDocument();
+            var document = AWSDocumentConverter.ToDocument(tObject);
             dynamoDBTable.PutItem(document);
         }
 
@@ -83,11 +86,9 @@ namespace AWSDynamoDBFramework
         }
 
         public T Get<T>(string id, bool consistentRead = true, List<string> attributesToGet = null)
-            where T : AWSDocumentConverter, new()
         {
             var document = Get(id, consistentRead, attributesToGet);
-            T tete = new T();
-            var result = (T)tete.ToObject(document);
+            var result = (T)AWSDocumentConverter.ToObject<T>(document);
             return result;
         }
 
@@ -97,9 +98,9 @@ namespace AWSDynamoDBFramework
         }
 
 
-        public Document PartialUpdateCommand(AWSDocumentConverter awsObject, ReturnValues returnValues = ReturnValues.AllNewAttributes)
+        public Document PartialUpdateCommand<T>(T tObject, ReturnValues returnValues = ReturnValues.AllNewAttributes)
         {
-            var document = awsObject.ToDocument();
+            var document = AWSDocumentConverter.ToDocument(tObject);
 
             UpdateItemOperationConfig config = new UpdateItemOperationConfig
             {
@@ -110,13 +111,12 @@ namespace AWSDynamoDBFramework
         }
 
         public void BatchInsert<T>(List<T> batchOfObjects)
-            where T : AWSDocumentConverter
         {
             var batchWrite = dynamoDBTable.CreateBatchWrite();
 
-            foreach (var awsDocumentConverter in batchOfObjects)
+            foreach (var tObject in batchOfObjects)
             {
-                var document = awsDocumentConverter.ToDocument();
+                var document = AWSDocumentConverter.ToDocument(tObject);
                 batchWrite.AddDocumentToPut(document);
             }
             batchWrite.Execute();
@@ -152,7 +152,7 @@ namespace AWSDynamoDBFramework
         }
 
         public List<T> BatchGet<T>(List<string> idList, bool consistentRead = true, List<string> attributesToGet = null)
-            where T : AWSDocumentConverter, new()
+            where T : new()
         {
             List<T> tList = new List<T>();
             var documents = BatchGet(idList, consistentRead, attributesToGet);
@@ -160,7 +160,7 @@ namespace AWSDynamoDBFramework
             foreach (var document in documents)
             {
                 T t = new T();
-                t = (T)t.ToObject(document);
+                t = (T)AWSDocumentConverter.ToObject<T>(document);
                 tList.Add(t);
             }
 
@@ -202,12 +202,10 @@ namespace AWSDynamoDBFramework
         }
 
         public IEnumerable<T> Scan<T>(List<ScanFilterCondition> scanFilterConditions, bool consistentRead = true, List<string> attributesToGet = null)
-            where T : AWSDocumentConverter, new()
         {
             foreach (var document in Scan(scanFilterConditions, consistentRead, attributesToGet))
             {
-                T t = new T();
-                var result = (T)t.ToObject(document);
+                var result = (T)AWSDocumentConverter.ToObject<T>(document);
                 yield return result;
             }
         }
@@ -234,7 +232,6 @@ namespace AWSDynamoDBFramework
         }
 
         public void ConditionalUpdate<T>(T tObject, string condAttribute, object expectedValue)
-            where T : AWSDocumentConverter
         {
             var splittedAttributes = condAttribute.Split('.');
 
@@ -261,7 +258,7 @@ namespace AWSDynamoDBFramework
                 ReturnValues = ReturnValues.AllNewAttributes
             };
 
-            dynamoDBTable.UpdateItem(tObject.ToDocument(), config);
+            dynamoDBTable.UpdateItem(AWSDocumentConverter.ToDocument(tObject), config);
 
         }
 

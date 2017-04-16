@@ -26,6 +26,7 @@ namespace AWSDynamoDBFramework
 
         public AWSDynamoDBStream(BasicAWSCredentials basicAWSCredentials, RegionEndpoint regionEndpoint, string tableName, AWSDynamoDBIteratorType type)
         {
+            this.TableName = tableName;
             this.AmazonDynamoDBStreamsClient = new AmazonDynamoDBStreamsClient(basicAWSCredentials, regionEndpoint);
             this.AWSDynamoDBIteratorType = type;
             var listStreams = AmazonDynamoDBStreamsClient.ListStreams(new ListStreamsRequest()
@@ -33,7 +34,7 @@ namespace AWSDynamoDBFramework
                 TableName = this.TableName
             });
 
-            this.StreamArn = listStreams.Streams.Single().StreamArn;
+            this.StreamArn = listStreams.Streams.First().StreamArn;
 
             DescribeStreamRequest describeStreamRequest = new DescribeStreamRequest()
             {
@@ -82,6 +83,35 @@ namespace AWSDynamoDBFramework
             var records = recordsResponse.Records;
 
             return records;
+        }
+
+        private T dictionaryToObject<T>(Dictionary<string,AttributeValue> dictionary)
+        {
+            var document = Document.FromAttributeMap(dictionary);
+            return AWSDocumentConverter.ToObject<T>(document);
+        }
+
+        public List<AWSEventRecord<T>> GetRecords<T>()
+        {
+            List<AWSEventRecord<T>> eventRecords = new List<AWSEventRecord<T>>();
+            var records = GetRecords();
+            foreach (var record in records)
+            {
+                AWSEventRecord<T> eventRecord = new AWSEventRecord<T>()
+                {
+                    EventID = record.EventID,
+                    EventName = record.EventName,
+                    EventSource = record.EventSource,
+                    EventVersion = record.EventVersion,
+                    SequenceNumber = record.Dynamodb.SequenceNumber,
+                    OldImage = dictionaryToObject<T>(record.Dynamodb.OldImage),
+                    NewImage = dictionaryToObject<T>(record.Dynamodb.NewImage),
+                };
+
+                eventRecords.Add(eventRecord);
+            }
+
+            return eventRecords;
         }
     }
 

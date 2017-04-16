@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace Samples.PersonModel
 {
-    public class Job : AWSDocumentConverter
+    public class Job
     {
         public string JobName { get; set; }
         public int Salary { get; set; }

@@ -7,7 +7,7 @@ using AWSDynamoDBFramework;
 
 namespace Samples.PersonModel
 {
-    public class Person : AWSDocumentConverter
+    public class Person
     {
         public string Id { get; set; }
         public string Name { get; set; }

@@ -16,13 +16,6 @@ namespace Samples
     {
         static void Main(string[] args)
         {
-            // Startup data.
-            List<AWSDocumentConverter> persons = new List<AWSDocumentConverter>();
-            for (int i = 0; i < 100; i++)
-            {
-                persons.Add(PersonFactory.getRandomPerson());
-            }
-
             AWSDynamoTableConfig config = new AWSDynamoTableConfig("Persons", typeof(string), "Id", 5, 5);
 
             // Create a DynamoDBContext
@@ -30,10 +23,9 @@ namespace Samples
                 RegionEndpoint.EUWest1,
                 "##################",                           // Access key
                 "#########################################",    // Secret key
-                config,                                         // Table config
-                persons);                                       // Initial load data. (Only loaded if table doesn't exists)
+                config                                          // Table config
+                );                                       
 
-                
             Console.WriteLine("Press enter to exit...");
 
             Console.ReadLine();
@@ -48,6 +40,15 @@ namespace Samples
 
         public static void PersonStream(DynamoDBContext ddbc)
         {
+            AWSDynamoTableConfig config = new AWSDynamoTableConfig("PersonEvents", typeof(string), "EventID", 1, 5);
+            // Create a DynamoDBContext
+            DynamoDBContext ddbcEvents = new DynamoDBContext(
+                RegionEndpoint.EUWest1,
+                "##################",                           // Access key
+                "#########################################",    // Secret key
+                config                                          // Table config
+                );
+
             var stream = ddbc.GetAWSDynamoDBStream(AWSDynamoDBIteratorType.LATEST);
 
             while (true)
@@ -55,17 +56,18 @@ namespace Samples
                 Thread.Sleep(5000);
                 Console.WriteLine("- - - - - - - - - - - - - - - - ");
                 Console.WriteLine("Getting records");
-                var records = stream.GetRecords();
+                var records = stream.GetRecords<Person>();
                 foreach (var record in records)
                 {
-                    Console.WriteLine("EventName: " +record.EventName + " || Person ID: " + record.Dynamodb.NewImage["Id"].S + " || SequenceNumber: " + record.Dynamodb.SequenceNumber);
+                    Console.WriteLine("EventName: " + record.EventName + " || Person ID: " + record.NewImage.Id + " || SequenceNumber: " + record.SequenceNumber);
+                    ddbcEvents.Insert(record);
                 }
             }
         }
 
         public static void PersonExample(DynamoDBContext ddbc)
         {
-            AWSDynamoTableConfig config = new AWSDynamoTableConfig("Persons", typeof(string), "Id", 5, 5);
+
             // Insert 1 person
             ddbc.Insert(PersonFactory.getSpecificPerson());
 
@@ -92,14 +94,15 @@ namespace Samples
             ddbc.AtomicCounter("uniqueid", "Age", 2);
 
             // Conditional Update. Update Person's job only if great-grandfather's name is Troels       
-            person.Job = new Job()
+            Person personCondUpdate = new Person() { Id = "uniqueid" };
+            personCondUpdate.Job = new Job()
             {
                 JobName = "CEO",
                 Salary = 9878984,
                 Seniority = 12
             };
 
-            ddbc.ConditionalUpdate(person, "Father.Mother.Father.Name", "Troels");
+            ddbc.ConditionalUpdate(personCondUpdate, "Father.Mother.Father.Name", "Troels");
 
         }
 
