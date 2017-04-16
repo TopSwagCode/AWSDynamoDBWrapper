@@ -72,7 +72,7 @@ namespace Samples
             ddbc.Insert(PersonFactory.getSpecificPerson());
 
             // Get 1 person
-            var person = ddbc.Get<Person>("uniqueid");
+            Person person = ddbc.Get<Person>("uniqueid");
 
             // Batch Insert 100 Persons
             List<Person> persons = new List<Person>();
@@ -84,13 +84,13 @@ namespace Samples
 
             // Scan for persons with age greater than 3500
             ScanFilterCondition sfc = new ScanFilterCondition("Age", ScanOperator.GreaterThan, 1000);
-            var result = ddbc.Scan<Person>(new List<ScanFilterCondition>() { sfc }).ToList();
+            List<Person> result = ddbc.Scan<Person>(new List<ScanFilterCondition>() { sfc }).ToList();
 
             // Delete all people in scan result.
             var idList = result.Select(x => x.Id).ToList();
             ddbc.BatchDelete(idList);
 
-            // Count age up by 2 atomicly (Also works with negative numbers)
+            // Count age up by 2 atomicly (Also works with negative numbers for counting down)
             ddbc.AtomicCounter("uniqueid", "Age", 2);
 
             // Conditional Update. Update Person's job only if great-grandfather's name is Troels       

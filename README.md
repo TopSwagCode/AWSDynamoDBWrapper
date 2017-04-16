@@ -7,7 +7,9 @@ Have allready implemented alot of DynamoDB features.
 
 UPDATE! We now support updating of Read/WriteCapacityUnits.
 
-UPDATE! We now support DynamoDB Streams.     
+UPDATE! We now support DynamoDB Streams.    
+
+UPDATE! Streams now returns List<AWSEventRecord>. Which contains new and old version of object changed. 
      
 ![Stream](stream.gif)
     
@@ -76,7 +78,7 @@ ddbc.Insert(person);
 
 ~~~~~~.NET
 // Get a person by id
-var person = ddbc.Get<Person>("uniqueid");
+Person person = ddbc.Get<Person>("uniqueid");
 ~~~~~~
 
 ~~~~~~.NET
@@ -91,7 +93,7 @@ ddbc.BatchInsert(persons);
 ~~~~~~.NET
 // Get a list of all person with age greater than 30.
 ScanFilterCondition sfc = new ScanFilterCondition("Age", ScanOperator.GreaterThan, 30);
-var result = ddbc.Scan<Person>(new List<ScanFilterCondition>() {sfc}).ToList();
+List<Person> result = ddbc.Scan<Person>(new List<ScanFilterCondition>() {sfc}).ToList();
 ~~~~~~
 
 ~~~~~~.NET
@@ -176,5 +178,4 @@ Heres just a small list of Insert events stored for Persons table. Stored in new
 
 Joshua Jesper Krægpørh Ryder.
 Software developer at First Agenda (Århus Denmark.)
-
 Contact me at Josh@TopSwagCode.com
