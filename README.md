@@ -50,22 +50,15 @@ DynamoDBContext ddbc = new DynamoDBContext(
     "#########################################"); // Secret key
 ~~~~~~
 
-To insert a object simply implement the abstact class to your classes like so:
+~~To insert a object simply implement the abstact class to your classes like so:~~    
+Nope. Not any more! AWSDocumentConverter is now fully static. Which means some things have changed like:
 ~~~~~~.NET
-public class Person : AWSDocumentConverter
-{
-    ....
-}
-
-public class Job : AWSDocumentConverter
-{
-    ....
-}
-
-public class Pet : AWSDocumentConverter
-{
-    ....
-}
+Person p = AWSDocumentConverter.ToObject<Person>(document);
+//Or
+Person person = new Person(){
+    ...
+};
+var document = AWSDocumentConverter.ToDocument(person);
 ~~~~~~
 
 This will enable you to use DynamoDB like so:
@@ -113,6 +106,13 @@ ddbc.ConditionalUpdate(person, "Father.Mother.Father.Name", "Troels");
 ~~~~~~
 
 ~~~~~~.NET
+// Updating Read/WriteCapacityUnits for your DynamoDB (Eg. Needing more or less performance)
+ddbc.AWSDynamoDBTable.ReadCapacityUnits = 15;
+ddbc.AWSDynamoDBTable.WriteCapacityUnits = 15;
+ddbc.AWSDynamoDBTable.UpdateTable();
+~~~~~~
+
+~~~~~~.NET
 // DynamoDB Stream getting all events (Delete, Update, Insert).
 // Note this example, gets the NewImage, which will fail if you are deleteing objects. (Nullpointer exception).
 // The stream is smart and remembers which Sequence last scanned, and follows up where it left of.
@@ -121,20 +121,57 @@ var stream = ddbc.GetAWSDynamoDBStream(AWSDynamoDBIteratorType.LATEST);
 while (true)
 {
     Thread.Sleep(5000);
-    var records = stream.GetRecords();
+    var records = stream.GetRecords<Person>();
     foreach (var record in records)
     {
-        Console.WriteLine("EventName: " +record.EventName + " || Person ID: " + record.Dynamodb.NewImage["Id"].S + " || SequenceNumber: " + record.Dynamodb.SequenceNumber);
+        Console.WriteLine("EventName: " + record.EventName + " || Person ID: " + record.NewImage.Id + " || SequenceNumber: " + record.SequenceNumber);
     }
 }
 ~~~~~~
 
+
 ~~~~~~.NET
-// Updating Read/WriteCapacityUnits for your DynamoDB (Eg. Needing more or less performance)
-ddbc.AWSDynamoDBTable.ReadCapacityUnits = 15;
-ddbc.AWSDynamoDBTable.WriteCapacityUnits = 15;
-ddbc.AWSDynamoDBTable.UpdateTable();
+// With the new AWSEvemtRecord class added, we can do some fancy stuff.
+// Like saving all events from Persons table into a new table.
+// AWS only stores events upto 24 hours.
+// With this neat little trick you can make your own DynamoDB EventStore.
+// Or save these events in any other event store you would like :)
+
+AWSDynamoTableConfig config = new AWSDynamoTableConfig("PersonEvents", typeof(string), "EventID", 1, 5);
+// Create a DynamoDBContext
+DynamoDBContext ddbcEvents = new DynamoDBContext(
+    RegionEndpoint.EUWest1,
+    "##################",                           // Access key
+    "#########################################",    // Secret key
+    config                                          // Table config
+    );
+
+var stream = ddbc.GetAWSDynamoDBStream(AWSDynamoDBIteratorType.LATEST);
+
+while (true)
+{
+    Thread.Sleep(5000);
+    var records = stream.GetRecords<Person>();
+    foreach (var record in records)
+    {
+        ddbcEvents.Insert(record);
+    }
+}
 ~~~~~~
+
+With the new AWSEventRecord we can see the changed made to Person with both Snapshots saved (NewImage and OldImage).    
+Combined with alot of extra Event data like Event name (Insert, Update, Delete).   
+If for some reason your app should crash, it's easy to start up again from Last SequenceNumber and just start saving the new events since then.   
+And if you dont mind about performance, you can just get all event's last 24 hours from aws and run import again to be sure you didn't miss any events.
+
+Here is how a event with a Person Insert looks like in AWS.    
+![Event](event.png)
+
+Heres just a small list of Insert events stored for Persons table. Stored in new table PersonEvents.
+    
+![Event List](eventlist.png)
+
+
 
 
 Joshua Jesper Krægpørh Ryder.
