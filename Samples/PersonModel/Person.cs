@@ -20,6 +20,8 @@ namespace Samples.PersonModel
         public Person Father { get; set; }
         public Person Mother { get; set; }
         public Job Job { get; set; }
+        public float FloatMyBoat { get; set; }
+
         public Person()
         {
 

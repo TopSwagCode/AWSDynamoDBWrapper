@@ -173,9 +173,7 @@ Heres just a small list of Insert events stored for Persons table. Stored in new
     
 ![Event List](eventlist.png)
 
-
-
-
-Joshua Jesper Krægpørh Ryder.
-Software developer at First Agenda (Århus Denmark.)
-Contact me at Josh@TopSwagCode.com
+Would love to hear feedback and feature ideas.        
+Joshua Jesper Krægpørh Ryder.         
+Software developer at First Agenda (Århus Denmark.)         
+Contact me at Josh@TopSwagCode.com      

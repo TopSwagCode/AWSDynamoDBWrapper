@@ -75,7 +75,7 @@ namespace AWSDynamoDBFramework
                 {
                     document.Add(entry.Key, (float?)entry.Value);
                 }
-                else if (type == typeof(double))
+                else if (type == typeof(double) || type == typeof(double?))
                 {
                     document.Add(entry.Key, (double)entry.Value);
                 }
@@ -186,22 +186,32 @@ namespace AWSDynamoDBFramework
                         }
                         else if (propertyInfo.PropertyType == typeof(float))
                         {
-                            // TODO: Needs to implemented
+                            propertyInfo.SetValue(classObject, (float)entry.Value.AsDouble()); // Needs testing.
                         }
                         else if (propertyInfo.PropertyType == typeof(double))
                         {
-                            // TODO: Needs to implemented
+                            propertyInfo.SetValue(classObject, entry.Value.AsDouble()); // Needs testing.
                         }
                         else if (propertyInfo.PropertyType == typeof(uint))
                         {
-                            // TODO: Needs to implemented
+                            propertyInfo.SetValue(classObject, entry.Value.AsUInt()); // Needs testing.
+                        }
+                        else if (propertyInfo.PropertyType == typeof(long))
+                        {
+                            propertyInfo.SetValue(classObject, entry.Value.AsLong()); // Needs testing.
+                        }
+                        else if (propertyInfo.PropertyType == typeof(ulong))
+                        {
+                            propertyInfo.SetValue(classObject, entry.Value.AsULong()); // Needs testing.
+                        }
+                        else if (propertyInfo.PropertyType == typeof(char))
+                        {
+                            propertyInfo.SetValue(classObject, entry.Value.AsChar()); // Needs testing.
                         }
                         else
                         {
                             Type valueType = entry.Value.GetType();
-
-
-
+                            
                             if (valueType == typeof(DynamoDBList))
                             {
                                 var dynamoDbList = entry.Value as DynamoDBList;

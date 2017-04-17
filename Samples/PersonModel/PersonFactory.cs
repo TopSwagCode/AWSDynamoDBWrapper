@@ -22,6 +22,13 @@ namespace Samples.PersonModel
             return random.Next(start, end);
         }
 
+        static float RandomFloat()
+        {
+            double mantissa = (random.NextDouble() * 2.0) - 1.0;
+            double exponent = Math.Pow(2.0, random.Next(-126, 128));
+            return (float)(mantissa * exponent);
+        }
+
         public static Person getRandomPerson()
         {
             Random rnd = new Random();
@@ -33,6 +40,7 @@ namespace Samples.PersonModel
                 Age = RandomNumber(2000, 5000),
                 FavFruits = new List<string>() { RandomString(5), RandomString(5)},
                 LuckyNumbers = new List<int>() { RandomNumber(2,4), RandomNumber(2,5)},
+                FloatMyBoat = RandomFloat(),
                 Pet = new Pet()
                 {
                     Name = RandomString(6),
@@ -128,6 +136,7 @@ namespace Samples.PersonModel
                 Age = 20,
                 //Name = "Test Person",
                 Human = false,
+                FloatMyBoat = RandomFloat(),
                 FavFruits = new List<string>()
                 {
                     "Bannnanana", "Apple"

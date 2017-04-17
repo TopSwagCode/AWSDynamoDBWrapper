@@ -20,7 +20,7 @@ namespace AWSDynamoDBFramework
         private AmazonDynamoDBClient client;
         private Table dynamoDBTable;
         public AWSDynamoTableConfig AWSDynamoTableConfig { get; set; }
-        public List<AWSDocumentConverter> StartupData { get; private set; }
+        public List<AWSDocumentConverter> StartupData { get; private set; } // Not implemented proper. Changed
         public AWSDynamoDBTable AWSDynamoDBTable { get; set; }
         private BasicAWSCredentials BasicAWSCredentials { get; set; }
         private RegionEndpoint RegionEndpoint { get; set; }
@@ -53,7 +53,7 @@ namespace AWSDynamoDBFramework
         private void initiateTable()
         {
             // Check if Table exists
-            AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits);
+            AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits, AWSDynamoTableConfig.StreamEnabled);
             
             // Create table if not
             var createNewDynamoDB = !AWSDynamoDBTable.TableExists();

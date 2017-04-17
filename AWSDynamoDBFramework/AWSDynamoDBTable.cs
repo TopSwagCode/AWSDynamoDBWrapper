@@ -16,9 +16,11 @@ namespace AWSDynamoDBFramework
         public int ReadCapacityUnits { get; set; }
         public int WriteCapacityUnits { get; set; }
 
+        private bool _enableStream;
+
         private AmazonDynamoDBClient client;
 
-        public AWSDynamoDBTable(AmazonDynamoDBClient client, string tableName, string keyName, Type keyType, int readCapacityUnits, int writeCapacityUnits)
+        public AWSDynamoDBTable(AmazonDynamoDBClient client, string tableName, string keyName, Type keyType, int readCapacityUnits, int writeCapacityUnits, bool enableStream = false)
         {
             this.client = client;
             this.TableName = tableName;
@@ -26,6 +28,7 @@ namespace AWSDynamoDBFramework
             this.KeyType = keyType;
             this.ReadCapacityUnits = readCapacityUnits;
             this.WriteCapacityUnits = writeCapacityUnits;
+            this._enableStream = enableStream;
         }
 
         public void UpdateTable(bool waitUntilTableCreated = false)
@@ -40,35 +43,57 @@ namespace AWSDynamoDBFramework
 
         public void ExecuteCreateTable(bool waitUntilTableCreated = false)
         {
-            TableExists();
-            var response = client.CreateTable(new CreateTableRequest
+            try
             {
-                TableName = TableName,
-                AttributeDefinitions = new List<AttributeDefinition>()
-                              {
-                                  new AttributeDefinition
-                                  {
-                                      AttributeName = KeyName,
-                                      AttributeType = KeyType == typeof(string) ? "S" : "N"
-                                  }
-                              },
-                KeySchema = new List<KeySchemaElement>()
-                              {
-                                  new KeySchemaElement
-                                  {
-                                      AttributeName = KeyName,
-                                      KeyType = "HASH"
-                                  }
-                              },
-                ProvisionedThroughput = new ProvisionedThroughput
+                var createTableRequest = new CreateTableRequest
                 {
-                    ReadCapacityUnits = ReadCapacityUnits,
-                    WriteCapacityUnits = WriteCapacityUnits
-                }
-            });
+                    TableName = TableName,
 
-            if(waitUntilTableCreated)
-                WaitTillTableCreated(client, TableName, response);
+                    AttributeDefinitions = new List<AttributeDefinition>()
+                                  {
+                                      new AttributeDefinition
+                                      {
+                                          AttributeName = KeyName,
+                                          AttributeType = KeyType == typeof(string) ? "S" : "N"
+                                      }
+                                  },
+                    KeySchema = new List<KeySchemaElement>()
+                                  {
+                                      new KeySchemaElement
+                                      {
+                                          AttributeName = KeyName,
+                                          KeyType = "HASH"
+                                      }
+                                  },
+                    ProvisionedThroughput = new ProvisionedThroughput
+                    {
+                        ReadCapacityUnits = ReadCapacityUnits,
+                        WriteCapacityUnits = WriteCapacityUnits
+                    }
+                };
+
+                if (_enableStream)
+                {
+                    var streamSpecification = new StreamSpecification()
+                    {
+                        StreamEnabled = true,
+                        StreamViewType = StreamViewType.NEW_AND_OLD_IMAGES,
+                    };
+
+                    createTableRequest.StreamSpecification = streamSpecification;
+                }
+
+                var response = client.CreateTable(createTableRequest);
+                if (waitUntilTableCreated)
+                    WaitTillTableCreated(client, TableName, response);
+
+            }
+            catch (ResourceInUseException re)
+            {
+                Console.WriteLine("Table " + TableName + " allready being created.");
+                if (waitUntilTableCreated)
+                    WaitTillTableCreated(client, TableName);
+            }    
         }
 
         public bool TableExists()
@@ -94,12 +119,16 @@ namespace AWSDynamoDBFramework
             }
         }
 
-        private static void WaitTillTableCreated(AmazonDynamoDBClient client, string tableName, CreateTableResponse response)
+        private static void WaitTillTableCreated(AmazonDynamoDBClient client, string tableName, CreateTableResponse response = null)
         {
-            var tableDescription = response.TableDescription;
-
-            string status = tableDescription.TableStatus;
-
+            string status = "NOTACTIVE";
+    
+            if(response != null)
+            {
+                var tableDescription = response.TableDescription;
+                status = tableDescription.TableStatus;
+            }
+            
             Console.WriteLine(tableName + " - " + status);
 
             // Let us wait until table is created. Call DescribeTable.
