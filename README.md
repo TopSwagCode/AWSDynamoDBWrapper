@@ -5,9 +5,19 @@ After looking at the [AWS Mapping example](http://docs.aws.amazon.com/amazondyna
 I have created this small AWS DynamoDB Wrapper for making developent easier.   
 Have allready implemented alot of DynamoDB features.      
 
-UPDATE! Async has arrived! :) 
+UPDATE! Async has arrived! :)   
 
 ![Stream](async.png)
+
+UPDATE! Async all the stuff! AWSDynamoDBContext constructors now removed. Now Static methods for getting instances added. This has enabled Async generating of Tables as part of startup of your app! :)
+
+~~~~~~.NET
+DynamoDBContext.GetDynamoDBContext( ..... );
+// or
+DynamoDBContext.GetDynamoDBContextAsync( ..... );
+~~~~~~
+
+Async samples will come soon.
 
 In the sample project I have a data structure looking like this:
 
@@ -38,7 +48,7 @@ A good structure with some depth giving alot of work making DimensionTypeConvert
 To get starting just make a DynamoDBContext.
 ~~~~~~.NET
 // Create a DynamoDBContext
-DynamoDBContext ddbc = new DynamoDBContext(
+DynamoDBContext ddbc = DynamoDBContext.GetDynamoDBContext(
     "Person", // Table name
     RegionEndpoint.EUWest1, // Region
     "##############", // Access key
@@ -138,7 +148,7 @@ Bottom console window, is datapump project inserting new person every second.
 
 AWSDynamoTableConfig config = new AWSDynamoTableConfig("PersonEvents", typeof(string), "EventID", 1, 5);
 // Create a DynamoDBContext
-DynamoDBContext ddbcEvents = new DynamoDBContext(
+DynamoDBContext ddbcEvents = DynamoDBContext.GetDynamoDBContext(
     RegionEndpoint.EUWest1,
     "##################",                           // Access key
     "#########################################",    // Secret key
@@ -170,7 +180,15 @@ Heres just a small list of Insert events stored for Persons table. Stored in new
     
 ![Event List](eventlist.png)
 
-Would love to hear feedback and feature ideas.        
-Joshua Jesper Krægpørh Ryder.         
-Software developer at First Agenda (Århus Denmark.)         
-Contact me at Josh@TopSwagCode.com      
+## Roadmap
+
+* Sample CRUD App.
+* Async samples on Readme and in Sample Project.
+* Query support. (Been abit lazy with implementing it).
+* Add support for more datatype (Datetime, Uint and more).
+* Whatever you need :) Just send me a email or message me on Facebook, Linkin or Reddit. (No tweeting bird here :P )
+
+Would love to hear feedback and feature ideas.    
+Joshua Jesper Krægpørh Ryder.    
+Software developer at First Agenda (Århus Denmark.)   
+Contact me at Josh@TopSwagCode.com    

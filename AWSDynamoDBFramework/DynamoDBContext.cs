@@ -25,7 +25,7 @@ namespace AWSDynamoDBFramework
         private RegionEndpoint RegionEndpoint { get; set; }
         private AWSDocumentConverter AWSDocumentConverter { get; set; }
 
-        public DynamoDBContext(RegionEndpoint regionEndpoint, string accessKey, string secretKey, AWSDynamoTableConfig tableConfig)
+        private DynamoDBContext(RegionEndpoint regionEndpoint, string accessKey, string secretKey, AWSDynamoTableConfig tableConfig)
         {
             this.BasicAWSCredentials = new BasicAWSCredentials(accessKey, secretKey);
             this.RegionEndpoint = regionEndpoint;
@@ -34,34 +34,63 @@ namespace AWSDynamoDBFramework
             this.AWSDocumentConverter = new AWSDocumentConverter();
         }
 
-        public DynamoDBContext(BasicAWSCredentials credentials, RegionEndpoint regionEndpoint, AWSDynamoTableConfig tableConfig)
+        private DynamoDBContext(BasicAWSCredentials credentials, RegionEndpoint regionEndpoint, AWSDynamoTableConfig tableConfig)
         {
             this.BasicAWSCredentials = credentials;
             this.RegionEndpoint = regionEndpoint;
             this.client = new AmazonDynamoDBClient(credentials, new AmazonDynamoDBConfig() { RegionEndpoint = regionEndpoint });
             this.AWSDynamoTableConfig = tableConfig;
             this.AWSDocumentConverter = new AWSDocumentConverter();
+        }
 
-            
+        public static DynamoDBContext GetDynamoDBContext(RegionEndpoint regionEndpoint, string accessKey, string secretKey, AWSDynamoTableConfig tableConfig)
+        {
+            DynamoDBContext ddbc = new DynamoDBContext(regionEndpoint, accessKey, secretKey, tableConfig);
+            ddbc.CreateTable();
+            return ddbc;
+        }
+
+        public static DynamoDBContext GetDynamoDBContext(BasicAWSCredentials credentials, RegionEndpoint regionEndpoint, AWSDynamoTableConfig tableConfig)
+        {
+            DynamoDBContext ddbc = new DynamoDBContext(credentials, regionEndpoint, tableConfig);
+            ddbc.CreateTable();
+            return ddbc;
         }
 
         public void CreateTable()
         {
-            // Check if Table exists
             AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits, AWSDynamoTableConfig.StreamEnabled);
             
-            // Create table if not
-            var createNewDynamoDB = !AWSDynamoDBTable.TableExists();
-            if (createNewDynamoDB)
-                AWSDynamoDBTable.ExecuteCreateTable(true); // Wait for table to be created.
+            var tableExists = AWSDynamoDBTable.TableExists();
+            if (!tableExists)
+                AWSDynamoDBTable.ExecuteCreateTable();
 
-            // Load table
             dynamoDBTable = Table.LoadTable(client, AWSDynamoTableConfig.TableName);
         }
 
-        public async void CreateTableAsync()
+        public async static Task<DynamoDBContext> GetDynamoDBContextAsync(RegionEndpoint regionEndpoint, string accessKey, string secretKey, AWSDynamoTableConfig tableConfig)
         {
-            throw new NotImplementedException("Not implemented");
+            DynamoDBContext ddbc = new DynamoDBContext(regionEndpoint, accessKey, secretKey, tableConfig);
+            await ddbc.CreateTableAsync();
+            return ddbc;
+        }
+
+        public async static Task<DynamoDBContext> GetDynamoDBContextAsync(BasicAWSCredentials credentials, RegionEndpoint regionEndpoint, AWSDynamoTableConfig tableConfig)
+        {
+            DynamoDBContext ddbc = new DynamoDBContext(credentials, regionEndpoint, tableConfig);
+            await ddbc.CreateTableAsync();
+            return ddbc;
+        }
+
+        private async Task CreateTableAsync()
+        {
+            AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits, AWSDynamoTableConfig.StreamEnabled);
+
+            var tableExists = await AWSDynamoDBTable.TableExistsAsync();
+            if (!tableExists)
+                await AWSDynamoDBTable.ExecuteCreateTableAsync();
+
+            dynamoDBTable = Table.LoadTable(client, AWSDynamoTableConfig.TableName);
         }
 
 
