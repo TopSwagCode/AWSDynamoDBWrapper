@@ -5,20 +5,9 @@ After looking at the [AWS Mapping example](http://docs.aws.amazon.com/amazondyna
 I have created this small AWS DynamoDB Wrapper for making developent easier.   
 Have allready implemented alot of DynamoDB features.      
 
-UPDATE! We now support updating of Read/WriteCapacityUnits.
+UPDATE! Async has arrived! :) 
 
-UPDATE! We now support DynamoDB Streams.    
-
-UPDATE! Streams now returns List<AWSEventRecord>. Which contains new and old version of object changed. 
-
-UPDATE! Enableing streams during creating of table now possible.
-
-BUGFIX! Mutliple proccesses trying to create table causes the slowest to fail and break. Now it just skips ahead to wait for table created state and starts polling for state.
-
-![Stream](stream.gif)
-    
-Top console window, is the dynamodb stream fetching new event every 5 seconds.    
-Bottom console window, is datapump project inserting new person every second.
+![Stream](async.png)
 
 In the sample project I have a data structure looking like this:
 
@@ -135,6 +124,10 @@ while (true)
 }
 ~~~~~~
 
+![Stream](stream.gif)
+    
+Top console window, is the dynamodb stream fetching new event every 5 seconds.    
+Bottom console window, is datapump project inserting new person every second.
 
 ~~~~~~.NET
 // With the new AWSEvemtRecord class added, we can do some fancy stuff.
