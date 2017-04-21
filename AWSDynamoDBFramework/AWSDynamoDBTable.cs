@@ -16,7 +16,7 @@ namespace AWSDynamoDBFramework
         public int ReadCapacityUnits { get; set; }
         public int WriteCapacityUnits { get; set; }
 
-        private bool _enableStream;
+        private bool EnableStream { get; set; }
 
         private AmazonDynamoDBClient client;
 
@@ -28,7 +28,7 @@ namespace AWSDynamoDBFramework
             this.KeyType = keyType;
             this.ReadCapacityUnits = readCapacityUnits;
             this.WriteCapacityUnits = writeCapacityUnits;
-            this._enableStream = enableStream;
+            this.EnableStream = enableStream;
         }
 
         public void UpdateTable(bool waitUntilTableCreated = false)
@@ -72,7 +72,7 @@ namespace AWSDynamoDBFramework
                     }
                 };
 
-                if (_enableStream)
+                if (EnableStream)
                 {
                     var streamSpecification = new StreamSpecification()
                     {

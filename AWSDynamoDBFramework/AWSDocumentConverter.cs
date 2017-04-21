@@ -124,32 +124,18 @@ namespace AWSDynamoDBFramework
 
         private static object ToObjectTest<T>(Document document, string className = "", string classNamespace = "")
         {
-            var thisType = !string.IsNullOrEmpty(className) ? className : typeof(T).Name;
+            //var thisType = !string.IsNullOrEmpty(className) ? className : typeof(T).Name;
             var thisNamespace = !string.IsNullOrEmpty(classNamespace) ? classNamespace : typeof(T).Namespace;
 
-            Type t = AppDomain.CurrentDomain.GetAssemblies()
-                                .SelectMany(a => a.GetTypes())
-                                .Where(qt => qt.Name == className)
-                                .FirstOrDefault();
-
-            var options = AppDomain.CurrentDomain.GetAssemblies()
-                                .SelectMany(a => a.GetTypes())
-                                .Where(qt => qt.Name == className).ToList();
-
-            var classObject2 = t != null ? t : Activator.CreateInstance(typeof(T));
-            
             var classObject = Activator.CreateInstance(typeof(T));
             var classPropertyInfo = classObject.GetType().GetProperties().FirstOrDefault(x => x.Name == className);
             
-            // If className is a property. Use this class instead.
-            // Might be a problem if Person class doesn't contain for instance Rank class, but the Job class does. 
-            // Might need to deliver the subclass to next method call.
             if(classPropertyInfo != null)
             {
                 var propertyType = classPropertyInfo.PropertyType;
                 classObject = Activator.CreateInstance(propertyType);
             }
-            string namespacetest = $"{thisNamespace}.{thisType}";
+            //string namespacetest = $"{thisNamespace}.{thisType}";
 
             if (document != null)
                 foreach (var entry in document)
