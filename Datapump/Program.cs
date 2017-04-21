@@ -18,7 +18,7 @@ namespace Datapump
         {
             AWSDynamoTableConfig config = new AWSDynamoTableConfig("Persons", typeof(string), "Id", 5, 5);
             // Create a DynamoDBContext
-            DynamoDBContext ddbc = new DynamoDBContext(
+            DynamoDBContext ddbc = DynamoDBContext.GetDynamoDBContext(
                 RegionEndpoint.EUWest1,
                 "###################",                     // Access key
                 "#######################################", // Secret key
