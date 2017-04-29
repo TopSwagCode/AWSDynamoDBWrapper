@@ -19,7 +19,7 @@ namespace Samples
             AWSDynamoTableConfig config = new AWSDynamoTableConfig("Persons", typeof(string), "Id", 5, 5);
 
             // Create a DynamoDBContext
-            DynamoDBContext ddbc = new DynamoDBContext(
+            DynamoDBContext ddbc = DynamoDBContext.GetDynamoDBContext(
                 RegionEndpoint.EUWest1,
                 "##################",                           // Access key
                 "#########################################",    // Secret key
@@ -42,7 +42,7 @@ namespace Samples
         {
             AWSDynamoTableConfig config = new AWSDynamoTableConfig("PersonEvents", typeof(string), "EventID", 1, 5);
             // Create a DynamoDBContext
-            DynamoDBContext ddbcEvents = new DynamoDBContext(
+            DynamoDBContext ddbcEvents = DynamoDBContext.GetDynamoDBContext(
                 RegionEndpoint.EUWest1,
                 "##################",                           // Access key
                 "#########################################",    // Secret key
