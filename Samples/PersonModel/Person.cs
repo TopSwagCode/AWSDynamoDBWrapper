@@ -21,6 +21,7 @@ namespace Samples.PersonModel
         public Person Mother { get; set; }
         public Job Job { get; set; }
         public float FloatMyBoat { get; set; }
+        public DateTime? BirthDate { get; set; }
 
         public Person()
         {

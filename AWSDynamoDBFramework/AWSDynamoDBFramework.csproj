@@ -54,6 +54,7 @@
     <Compile Include="AWSDynamoTableConfig.cs" />
     <Compile Include="AWSEventRecord.cs" />
     <Compile Include="DynamoDBContext.cs" />
+    <Compile Include="QueryFilterCondition.cs" />
     <Compile Include="ScanFilterCondition.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

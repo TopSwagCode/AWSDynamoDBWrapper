@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>TopSwagCode.AWSDynamoDBFramework.DynamoDBWrapper</id>
+    <version>1.0.0</version>
+    <title>AWS DynamoDB Wrapper and Object/Document converter</title>
+    <authors>Joshua Ryder</authors>
+    <owners>TopSwagCode</owners>
+    <licenseUrl>https://github.com/kiksen1987/AWSDynamoDBWrapper/blob/master/LICENSE</licenseUrl>
+    <projectUrl>https://github.com/kiksen1987/AWSDynamoDBWrapper</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>A small package for making the use of DynamoDB in .NET projects easier. Contains a AWS Document converter and wrapper for most uses of dynamodb for quick and easy use.</description>
+    <releaseNotes>First release.</releaseNotes>
+    <copyright>Copyright 2017</copyright>
+    <tags>dynamodb dynamodbwrapper aws awsdynamodb</tags>
+  </metadata>
+</package>

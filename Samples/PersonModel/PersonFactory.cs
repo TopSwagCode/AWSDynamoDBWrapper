@@ -29,14 +29,22 @@ namespace Samples.PersonModel
             return (float)(mantissa * exponent);
         }
 
+        static DateTime RandomDay()
+        {
+            DateTime start = new DateTime(1995, 1, 1);
+            int range = (DateTime.Today - start).Days;
+            return start.AddDays(random.Next(range));
+        }
+
         public static Person getRandomPerson()
         {
             Random rnd = new Random();
 
             Person p = new Person()
             {
-                Id = RandomString(10),
+                Id = RandomNumber(0, 1000000),
                 Name = RandomString(6),
+                BirthDate = RandomDay(),
                 Age = RandomNumber(2000, 5000),
                 FavFruits = new List<string>() { RandomString(5), RandomString(5)},
                 LuckyNumbers = new List<int>() { RandomNumber(2,4), RandomNumber(2,5)},
@@ -132,9 +140,10 @@ namespace Samples.PersonModel
 
             var person = new Person()
             {
-                Id = "uniqueid",
+                Id = id,
                 Age = 20,
-                //Name = "Test Person",
+                BirthDate = new DateTime(1987, 02, 17),
+                Name = "Test Person",
                 Human = false,
                 FloatMyBoat = RandomFloat(),
                 FavFruits = new List<string>()

@@ -59,7 +59,7 @@ namespace AWSDynamoDBFramework
 
         public void CreateTable()
         {
-            AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits, AWSDynamoTableConfig.StreamEnabled);
+            AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.SortKeyName, AWSDynamoTableConfig.SortKeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits, AWSDynamoTableConfig.StreamEnabled);
             
             var tableExists = AWSDynamoDBTable.TableExists();
             if (!tableExists)
@@ -84,7 +84,7 @@ namespace AWSDynamoDBFramework
 
         private async Task CreateTableAsync()
         {
-            AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits, AWSDynamoTableConfig.StreamEnabled);
+            AWSDynamoDBTable = new AWSDynamoDBTable(client, AWSDynamoTableConfig.TableName, AWSDynamoTableConfig.KeyName, AWSDynamoTableConfig.KeyType, AWSDynamoTableConfig.SortKeyName, AWSDynamoTableConfig.SortKeyType, AWSDynamoTableConfig.ReadCapacityUnits, AWSDynamoTableConfig.WriteCapacityUnits, AWSDynamoTableConfig.StreamEnabled);
 
             var tableExists = await AWSDynamoDBTable.TableExistsAsync();
             if (!tableExists)
@@ -106,44 +106,48 @@ namespace AWSDynamoDBFramework
             await dynamoDBTable.PutItemAsync(document);
         }
 
-        private Document Get(string id, bool consistentRead = true, List<string> attributesToGet = null)
+        private Document Get(Primitive id, Primitive sortKey = null, bool consistentRead = true, List<string> attributesToGet = null)
+        {
+            GetItemOperationConfig config = new GetItemOperationConfig();
+            if (attributesToGet != null)
+                config.AttributesToGet = attributesToGet;
+
+            config.ConsistentRead = consistentRead;
+            
+            if(sortKey != null)
+                return dynamoDBTable.GetItem(id, sortKey, config);
+            else
+                return dynamoDBTable.GetItem(id, config);
+        }
+
+        private async Task<Document> GetAsync(Primitive id, Primitive sortKey = null, bool consistentRead = true, List<string> attributesToGet = null)
         {
             GetItemOperationConfig config = new GetItemOperationConfig();
             if (attributesToGet != null)
                 config.AttributesToGet = attributesToGet;
             config.ConsistentRead = consistentRead;
 
-            return dynamoDBTable.GetItem(id);
+            return await dynamoDBTable.GetItemAsync(id, config);
         }
 
-        private async Task<Document> GetAsync(string id, bool consistentRead = true, List<string> attributesToGet = null)
+        public T Get<T>(Primitive id, Primitive sortKey = null, bool consistentRead = true, List<string> attributesToGet = null)
         {
-            GetItemOperationConfig config = new GetItemOperationConfig();
-            if (attributesToGet != null)
-                config.AttributesToGet = attributesToGet;
-            config.ConsistentRead = consistentRead;
-
-            return await dynamoDBTable.GetItemAsync(id);
-        }
-
-        public T Get<T>(string id, bool consistentRead = true, List<string> attributesToGet = null)
-        {
-            var document = Get(id, consistentRead, attributesToGet);
+            var document = Get(id, sortKey, consistentRead, attributesToGet);
             return AWSDocumentConverter.ToObject<T>(document);
         }
 
-        public async Task<T> GetAsync<T>(string id, bool consistentRead = true, List<string> attributesToGet = null)
+        public async Task<T> GetAsync<T>(Primitive id, Primitive sortKey = null, bool consistentRead = true, List<string> attributesToGet = null)
         {
-            var document = await GetAsync(id, consistentRead, attributesToGet);
+            var document = await GetAsync(id, sortKey, consistentRead, attributesToGet);
             return AWSDocumentConverter.ToObject<T>(document);
         }
 
-        public void DeleteDocument(string id)
+        public void DeleteDocument(Primitive id)
         {
             dynamoDBTable.DeleteItem(id);
         }
 
-        public async Task DeleteDocumentAsync(string id)
+        public async Task DeleteDocumentAsync(Primitive id)
         {
            await dynamoDBTable.DeleteItemAsync(id);
         }
@@ -197,39 +201,81 @@ namespace AWSDynamoDBFramework
             await batchWrite.ExecuteAsync();
         }
 
-        public void BatchDelete(List<string> idList)
+        public void BatchDelete(List<Primitive> idList, List<Primitive> sortKeyList = null)
         {
+            if (sortKeyList != null && idList.Count != sortKeyList.Count)
+                throw new ArgumentException("sortKeyList not same length as idList");
+
             var batchWrite = dynamoDBTable.CreateBatchWrite();
 
-            foreach (var id in idList)
+            if (sortKeyList != null)
             {
-                batchWrite.AddKeyToDelete(new Primitive(id));
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    batchWrite.AddKeyToDelete(idList[i], sortKeyList[i]);
+                }
             }
+            else
+            {
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    batchWrite.AddKeyToDelete(idList[i]);
+                }
+            }
+
             batchWrite.Execute();
         }
 
-        public async Task BatchDeleteAsync(List<string> idList)
+        public async Task BatchDeleteAsync(List<Primitive> idList, List<Primitive> sortKeyList = null)
         {
+            if (sortKeyList != null && idList.Count != sortKeyList.Count)
+                throw new ArgumentException("sortKeyList not same length as idList");
+
             var batchWrite = dynamoDBTable.CreateBatchWrite();
 
-            foreach (var id in idList)
+            if(sortKeyList != null)
             {
-                batchWrite.AddKeyToDelete(new Primitive(id));
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    batchWrite.AddKeyToDelete(idList[i], sortKeyList[i]);
+                }
             }
+            else
+            {
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    batchWrite.AddKeyToDelete(idList[i]);
+                }
+            }
+            
+
             await batchWrite.ExecuteAsync();
         }
 
-        private List<Document> BatchGet(List<string> idList, bool consistentRead = true, List<string> attributesToGet = null)
+        private List<Document> BatchGet(List<Primitive> idList, List<Primitive> sortKeyList = null, bool consistentRead = true, List<string> attributesToGet = null)
         {
+            if (sortKeyList != null && idList.Count != sortKeyList.Count)
+                throw new ArgumentException("sortKeyList not same length as idList");
+
             var batchGet = dynamoDBTable.CreateBatchGet();
 
             batchGet.ConsistentRead = consistentRead;
             if (attributesToGet != null)
                 batchGet.AttributesToGet = attributesToGet;
 
-            foreach (var id in idList)
+            if (sortKeyList != null)
             {
-                batchGet.AddKey(new Primitive(id));
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    batchGet.AddKey(idList[i], sortKeyList[i]);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    batchGet.AddKey(idList[i]);
+                }
             }
 
             batchGet.Execute();
@@ -237,17 +283,30 @@ namespace AWSDynamoDBFramework
             return batchGet.Results;
         }
 
-        private async Task<List<Document>> BatchGetAsync(List<string> idList, bool consistentRead = true, List<string> attributesToGet = null)
+        private async Task<List<Document>> BatchGetAsync(List<Primitive> idList, List<Primitive> sortKeyList = null, bool consistentRead = true, List<string> attributesToGet = null)
         {
+            if (sortKeyList != null && idList.Count != sortKeyList.Count)
+                throw new ArgumentException("sortKeyList not same length as idList");
+
             var batchGet = dynamoDBTable.CreateBatchGet();
 
             batchGet.ConsistentRead = consistentRead;
             if (attributesToGet != null)
                 batchGet.AttributesToGet = attributesToGet;
 
-            foreach (var id in idList)
+            if (sortKeyList != null)
             {
-                batchGet.AddKey(new Primitive(id));
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    batchGet.AddKey(idList[i], sortKeyList[i]);
+                }
+            }
+            else
+            {
+                for (int i = 0; i < idList.Count; i++)
+                {
+                    batchGet.AddKey(idList[i]);
+                }
             }
 
             await batchGet.ExecuteAsync();
@@ -255,11 +314,11 @@ namespace AWSDynamoDBFramework
             return batchGet.Results;
         }
 
-        public List<T> BatchGet<T>(List<string> idList, bool consistentRead = true, List<string> attributesToGet = null)
+        public List<T> BatchGet<T>(List<Primitive> idList, List<Primitive> sortKeyList = null, bool consistentRead = true, List<string> attributesToGet = null)
             where T : new()
         {
             List<T> tList = new List<T>();
-            var documents = BatchGet(idList, consistentRead, attributesToGet);
+            var documents = BatchGet(idList, sortKeyList, consistentRead, attributesToGet);
 
             foreach (var document in documents)
             {
@@ -271,11 +330,11 @@ namespace AWSDynamoDBFramework
             return tList;
         }
 
-        public async Task<List<T>> BatchGetAsync<T>(List<string> idList, bool consistentRead = true, List<string> attributesToGet = null)
+        public async Task<List<T>> BatchGetAsync<T>(List<Primitive> idList, List<Primitive> sortKeyList = null, bool consistentRead = true, List<string> attributesToGet = null)
             where T : new()
         {
             List<T> tList = new List<T>();
-            var documents = await BatchGetAsync(idList, consistentRead, attributesToGet);
+            var documents = await BatchGetAsync(idList, sortKeyList, consistentRead, attributesToGet);
 
             foreach (var document in documents)
             {
@@ -287,27 +346,9 @@ namespace AWSDynamoDBFramework
             return tList;
         }
 
-        public IEnumerable<Document> Scan(List<ScanFilterCondition> scanFilterConditions, bool consistentRead = true, List<string> attributesToGet = null )
+        private IEnumerable<Document> Scan(List<ScanFilterCondition> scanFilterConditions, bool consistentRead = true, List<string> attributesToGet = null )
         {
-            ScanFilter scanFilter = new ScanFilter();
-
-            foreach (var scanFilterCondition in scanFilterConditions)
-            {
-                if(scanFilterCondition.Type == ScanFilterConditionType.one)
-                    scanFilter.AddCondition(scanFilterCondition.AttributeName, scanFilterCondition.Condition);
-                if (scanFilterCondition.Type == ScanFilterConditionType.two)
-                    scanFilter.AddCondition(scanFilterCondition.AttributeName, scanFilterCondition.ScanOperator, scanFilterCondition.AttributeValues);
-                if (scanFilterCondition.Type == ScanFilterConditionType.three)
-                    scanFilter.AddCondition(scanFilterCondition.AttributeName, scanFilterCondition.ScanOperator, scanFilterCondition.DynamoDBEntry);
-            }
-            
-            ScanOperationConfig scanOperationConfig = new ScanOperationConfig()
-            {
-                ConsistentRead = consistentRead,
-                Filter = scanFilter 
-            };
-            if (attributesToGet != null)
-                scanOperationConfig.AttributesToGet = attributesToGet;
+            ScanOperationConfig scanOperationConfig = GetScanOperationConfig(scanFilterConditions, consistentRead, attributesToGet);
 
             Search search = dynamoDBTable.Scan(scanOperationConfig);
             
@@ -325,19 +366,171 @@ namespace AWSDynamoDBFramework
         {
             foreach (var document in Scan(scanFilterConditions, consistentRead, attributesToGet))
             {
-                var result = (T)AWSDocumentConverter.ToObject<T>(document);
+                var result = AWSDocumentConverter.ToObject<T>(document);
                 yield return result;
             }
         }
 
-        public void AtomicCounter(string id, string attribute, int value)
+        private IEnumerable<Document> ScanAsyncTest(List<ScanFilterCondition> scanFilterConditions, bool consistentRead = true, List<string> attributesToGet = null)
         {
-            var request = new UpdateItemRequest
+            ScanOperationConfig scanOperationConfig = GetScanOperationConfig(scanFilterConditions, consistentRead, attributesToGet);
+
+            Search search = dynamoDBTable.Scan(scanOperationConfig);
+
+            List<Document> documentList = new List<Document>();
+            do
+            {
+                documentList = search.GetNextSetAsync().Result;
+
+                foreach (var document in documentList)
+                    yield return document;
+            } while (!search.IsDone);
+        }
+
+        private IEnumerable<T> ScanAsyncTest<T>(List<ScanFilterCondition> scanFilterConditions, bool consistentRead = true, List<string> attributesToGet = null)
+        {
+            foreach (var document in ScanAsyncTest(scanFilterConditions, consistentRead, attributesToGet))
+            {
+                var result = AWSDocumentConverter.ToObject<T>(document);
+                yield return result;
+            }
+        }
+
+        private async Task<List<T>> ScanAsync<T>(List<ScanFilterCondition> scanFilterConditions, bool consistentRead = true, List<string> attributesToGet = null)
+        {
+            ScanOperationConfig scanOperationConfig = GetScanOperationConfig(scanFilterConditions, consistentRead, attributesToGet);
+
+            Search search = dynamoDBTable.Scan(scanOperationConfig);
+
+            List<T> resultList = new List<T>();
+            List<Document> documentList = new List<Document>();
+            do
+            {
+                documentList = await search.GetNextSetAsync();
+                foreach(var document in documentList)
+                {
+                    resultList.Add(AWSDocumentConverter.ToObject<T>(document));
+                }
+           
+            } while (!search.IsDone);
+
+            return resultList;
+        }
+
+        private ScanOperationConfig GetScanOperationConfig(List<ScanFilterCondition> scanFilterConditions, bool consistentRead = true, List<string> attributesToGet = null)
+        {
+            ScanFilter scanFilter = new ScanFilter();
+
+            foreach (var scanFilterCondition in scanFilterConditions)
+            {
+                if (scanFilterCondition.Type == ScanFilterConditionType.one)
+                    scanFilter.AddCondition(scanFilterCondition.AttributeName, scanFilterCondition.Condition);
+                if (scanFilterCondition.Type == ScanFilterConditionType.two)
+                    scanFilter.AddCondition(scanFilterCondition.AttributeName, scanFilterCondition.ScanOperator, scanFilterCondition.AttributeValues);
+                if (scanFilterCondition.Type == ScanFilterConditionType.three)
+                    scanFilter.AddCondition(scanFilterCondition.AttributeName, scanFilterCondition.ScanOperator, scanFilterCondition.DynamoDBEntry);
+            }
+
+            ScanOperationConfig scanOperationConfig = new ScanOperationConfig()
+            {
+                ConsistentRead = consistentRead,
+                Filter = scanFilter
+            };
+            if (attributesToGet != null)
+                scanOperationConfig.AttributesToGet = attributesToGet;
+
+            return scanOperationConfig;
+        }
+
+        public async Task<List<T>> QueryAsync<T>(List<QueryFilterCondition> queryFilterConditions, bool consistentRead = true, List<string> attributesToGet = null)
+        {
+            QueryOperationConfig queryOperationConfig = GetQueryOperationConfig(queryFilterConditions, consistentRead, attributesToGet);
+
+            Search search = dynamoDBTable.Query(queryOperationConfig);
+
+            List<T> resultList = new List<T>();
+            List<Document> documentList = new List<Document>();
+            do
+            {
+                documentList = await search.GetNextSetAsync();
+                foreach (var document in documentList)
+                {
+                    resultList.Add(AWSDocumentConverter.ToObject<T>(document));
+                }
+
+            } while (!search.IsDone);
+
+            return resultList;
+        }
+
+        public List<T> Query<T>(List<QueryFilterCondition> queryFilterConditions, bool consistentRead = true, List<string> attributesToGet = null)
+        {
+            QueryOperationConfig queryOperationConfig = GetQueryOperationConfig(queryFilterConditions, consistentRead, attributesToGet);
+
+            Search search = dynamoDBTable.Query(queryOperationConfig);
+
+            List<T> resultList = new List<T>();
+            List<Document> documentList = new List<Document>();
+            do
+            {
+                documentList = search.GetNextSet();
+                foreach (var document in documentList)
+                {
+                    resultList.Add(AWSDocumentConverter.ToObject<T>(document));
+                }
+
+            } while (!search.IsDone);
+
+            return resultList;
+        }
+
+
+        private QueryOperationConfig GetQueryOperationConfig(List<QueryFilterCondition> QueryFilterConditions, bool consistentRead = true, List<string> attributesToGet = null)
+        {
+            QueryFilter queryFilter = new QueryFilter();
+
+            foreach (var queryFilterCondition in QueryFilterConditions)
+            {
+                if (queryFilterCondition.Type == QueryFilterConditionType.one)
+                    queryFilter.AddCondition(queryFilterCondition.AttributeName, queryFilterCondition.Condition);
+                if (queryFilterCondition.Type == QueryFilterConditionType.two)
+                    queryFilter.AddCondition(queryFilterCondition.AttributeName, queryFilterCondition.QueryOperator, queryFilterCondition.AttributeValues);
+                if (queryFilterCondition.Type == QueryFilterConditionType.three)
+                    queryFilter.AddCondition(queryFilterCondition.AttributeName, queryFilterCondition.QueryOperator, queryFilterCondition.DynamoDBEntry);
+            }
+
+            QueryOperationConfig queryOperationConfig = new QueryOperationConfig()
+            {
+                ConsistentRead = consistentRead,
+                Filter = queryFilter
+            };
+            if (attributesToGet != null)
+                queryOperationConfig.AttributesToGet = attributesToGet;
+
+            return queryOperationConfig;
+        }
+
+
+
+
+        private UpdateItemRequest GetUpdateItemRequestForAtomicCounter(Primitive id, string attribute, int value)
+        {
+            AttributeValue keyAttributeValue;
+            if(this.AWSDynamoTableConfig.KeyType == typeof(string))
+            {
+                keyAttributeValue = new AttributeValue { S = id };
+            }
+            else
+            {
+                keyAttributeValue = new AttributeValue { N = id };
+            }
+
+            return new UpdateItemRequest
             {
                 TableName = AWSDynamoTableConfig.TableName,
                 Key = new Dictionary<string, AttributeValue>
                 {
-                    { AWSDynamoTableConfig.KeyName, new AttributeValue { S = id } }
+                    { AWSDynamoTableConfig.KeyName, keyAttributeValue }
                 },
                 AttributeUpdates = new Dictionary<string, AttributeValueUpdate>()
                 {
@@ -347,61 +540,76 @@ namespace AWSDynamoDBFramework
                     },
                 },
             };
+        }
+
+        private UpdateItemRequest GetUpdateItemRequestForAtomicCounter(Primitive id, Primitive sortKey, string attribute, int value)
+        {
+            AttributeValue keyAttributeValue;
+            if (this.AWSDynamoTableConfig.KeyType == typeof(string))
+            {
+                keyAttributeValue = new AttributeValue { S = id };
+            }
+            else
+            {
+                keyAttributeValue = new AttributeValue { N = id };
+            }
+
+            AttributeValue sortKeyAttributeValue;
+            if (this.AWSDynamoTableConfig.SortKeyType == typeof(string))
+            {
+                sortKeyAttributeValue = new AttributeValue { S = sortKey };
+            }
+            else
+            {
+                sortKeyAttributeValue = new AttributeValue { N = sortKey };
+            }
+
+            return new UpdateItemRequest
+            {
+                TableName = AWSDynamoTableConfig.TableName,
+                Key = new Dictionary<string, AttributeValue>
+                {
+                    { AWSDynamoTableConfig.KeyName, keyAttributeValue },
+                    { AWSDynamoTableConfig.SortKeyName,  sortKeyAttributeValue }
+                },
+                AttributeUpdates = new Dictionary<string, AttributeValueUpdate>()
+                {
+                    {
+                        attribute,
+                        new AttributeValueUpdate { Action = "ADD", Value = new AttributeValue { N = value.ToString() } }
+                    },
+                },
+            };
+        }
+
+
+        public void AtomicCounter(Primitive id, string attribute, int value)
+        {
+            var request = GetUpdateItemRequestForAtomicCounter(id, attribute, value);
 
             client.UpdateItem(request);
         }
 
-        public async Task AtomicCounterAsync(string id, string attribute, int value)
+        public void AtomicCounter(Primitive id, Primitive sortKey, string attribute, int value)
         {
-            var request = new UpdateItemRequest
-            {
-                TableName = AWSDynamoTableConfig.TableName,
-                Key = new Dictionary<string, AttributeValue>
-                {
-                    { AWSDynamoTableConfig.KeyName, new AttributeValue { S = id } }
-                },
-                AttributeUpdates = new Dictionary<string, AttributeValueUpdate>()
-                {
-                    {
-                        attribute,
-                        new AttributeValueUpdate { Action = "ADD", Value = new AttributeValue { N = value.ToString() } }
-                    },
-                },
-            };
+            var request = GetUpdateItemRequestForAtomicCounter(id, sortKey, attribute, value);
+
+            client.UpdateItem(request);
+        }
+
+        public async Task AtomicCounterAsync(Primitive id, string attribute, int value)
+        {
+            var request = GetUpdateItemRequestForAtomicCounter(id, attribute, value);
 
             await client.UpdateItemAsync(request);
         }
-
-        public void ConditionalUpdate<T>(T tObject, string condAttribute, object expectedValue)
+        public async Task AtomicCounterAsync(Primitive id, Primitive sortKey, string attribute, int value)
         {
-            var splittedAttributes = condAttribute.Split('.');
+            var request = GetUpdateItemRequestForAtomicCounter(id, sortKey, attribute, value);
 
-            var specificAttributeToCheck = condAttribute;
-            string first = "";
-            string last = condAttribute;
-            if (splittedAttributes.Length > 1)
-            {
-                last = splittedAttributes.Last();
-                first = condAttribute.Remove(condAttribute.Length - last.Length);  
-            }
-
-            Expression expr = new Expression();
-            expr.ExpressionStatement = first+"#Cond = :Cond";
-            expr.ExpressionAttributeNames["#Cond"] = last;
-            if(expectedValue.GetType() == typeof(int))
-                expr.ExpressionAttributeValues[":Cond"] = (int)expectedValue;
-            if (expectedValue.GetType() == typeof(string))
-                expr.ExpressionAttributeValues[":Cond"] = (string)expectedValue;
-
-            UpdateItemOperationConfig config = new UpdateItemOperationConfig()
-            {
-                ConditionalExpression = expr,
-                ReturnValues = ReturnValues.AllNewAttributes
-            };
-
-            dynamoDBTable.UpdateItem(AWSDocumentConverter.ToDocument(tObject), config);
+            await client.UpdateItemAsync(request);
         }
-        public async void ConditionalUpdateAsync<T>(T tObject, string condAttribute, object expectedValue)
+        private UpdateItemOperationConfig GetUpdateItemOperationConfigForConditionalUpdate(string condAttribute, object expectedValue)
         {
             var splittedAttributes = condAttribute.Split('.');
 
@@ -425,24 +633,23 @@ namespace AWSDynamoDBFramework
             UpdateItemOperationConfig config = new UpdateItemOperationConfig()
             {
                 ConditionalExpression = expr,
-                ReturnValues = ReturnValues.AllNewAttributes
+                ReturnValues = ReturnValues.None
             };
 
+            return config;
+        }
+        public void ConditionalUpdate<T>(T tObject, string condAttribute, object expectedValue)
+        {
+            var config = GetUpdateItemOperationConfigForConditionalUpdate(condAttribute, expectedValue);
+            dynamoDBTable.UpdateItem(AWSDocumentConverter.ToDocument(tObject), config);
+        }
+        public async void ConditionalUpdateAsync<T>(T tObject, string condAttribute, object expectedValue)
+        {
+            var config = GetUpdateItemOperationConfigForConditionalUpdate(condAttribute, expectedValue);
             await dynamoDBTable.UpdateItemAsync(AWSDocumentConverter.ToDocument(tObject), config);
         }
 
-        public void Query()
-        {
-            /*
-             * The Query method enables you to query your tables. 
-             * You can only query the tables that have a composite primary key (partition key and sort key). 
-             * If your dynamoDBTable's primary key is made of only a partition key, 
-             * then the Query operation is not supported. By default, Query internally performs queries that are eventually consistent. 
-             * To learn about the consistency model.
-             */
-            
-            throw new NotImplementedException("Not implemented");
-        }
+        
 
         public AWSDynamoDBStream GetAWSDynamoDBStream(AWSDynamoDBIteratorType type)
         {

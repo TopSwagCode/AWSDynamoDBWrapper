@@ -5,7 +5,21 @@ After looking at the [AWS Mapping example](http://docs.aws.amazon.com/amazondyna
 I have created this small AWS DynamoDB Wrapper for making developent easier.   
 Have allready implemented alot of DynamoDB features.      
 
-UPDATE! Async has arrived! :)   
+UPDATE! String and Int support for Key's / Id's.  
+
+~~~~~~.NET
+var config = new AWSDynamoTableConfig("Product", typeof(int), "Id", 5, 5);
+// or 
+var config = new AWSDynamoTableConfig("Product", typeof(string), "Id", 5, 5);
+~~~~~~
+
+UPDATE! Support for sort key on DynamoDB tables 
+
+~~~~~~.NET
+                                   // TableName, KeyType, KeyName, SortKeyType, SortKeyName, Read, Write  
+var config = new AWSDynamoTableConfig("Product", typeof(int), "Id",typeof(string), "ManufacturerID", 5, 5);
+
+~~~~~~
 
 ![Stream](async.png)
 
@@ -17,7 +31,6 @@ DynamoDBContext.GetDynamoDBContext( ..... );
 DynamoDBContext.GetDynamoDBContextAsync( ..... );
 ~~~~~~
 
-Async samples will come soon.
 
 In the sample project I have a data structure looking like this:
 
@@ -25,6 +38,7 @@ Person:
 * Id (String)
 * Name (String)
 * Age (Int?)
+* BirthDate (DateTime?)
 * FavFruits (List<String>)
 * Human (Bool?)
 * Pet (Pet)
@@ -47,12 +61,14 @@ A good structure with some depth giving alot of work making DimensionTypeConvert
 
 To get starting just make a DynamoDBContext.
 ~~~~~~.NET
+AWSDynamoTableConfig config = new AWSDynamoTableConfig("Person", typeof(string), "Id", 5, 5);
+            
 // Create a DynamoDBContext
 DynamoDBContext ddbc = DynamoDBContext.GetDynamoDBContext(
-    "Person", // Table name
     RegionEndpoint.EUWest1, // Region
     "##############", // Access key
-    "#########################################"); // Secret key
+    "#########################################", // Secret key
+    config); // Table config 
 ~~~~~~
 
 ~~To insert a object simply implement the abstact class to your classes like so:~~    
@@ -82,7 +98,19 @@ ddbc.Insert(person);
 ~~~~~~.NET
 // Get a person by id
 Person person = ddbc.Get<Person>("uniqueid");
+
+// Or if your table is using int as key type.
+Person person = ddbc.Get<Person>(1337);
 ~~~~~~
+
+~~~~~~.NET
+// Support for use of Sort Key as well.
+Person person = ddbc.Get<Person>("uniqueid", "SortKey");
+
+// Combine key and sortkey types however you like (int, int) (int,string) (string, int) (string,string)
+Person person = ddbc.Get<Person>(1337, "SortKey");
+~~~~~~
+
 
 ~~~~~~.NET
 // Insert alot of persons at the same time. Use Batch insert.
@@ -97,6 +125,13 @@ ddbc.BatchInsert(persons);
 // Get a list of all person with age greater than 30.
 ScanFilterCondition sfc = new ScanFilterCondition("Age", ScanOperator.GreaterThan, 30);
 List<Person> result = ddbc.Scan<Person>(new List<ScanFilterCondition>() {sfc}).ToList();
+~~~~~~
+
+~~~~~~.NET
+QueryFilterCondition qfc1 = new QueryFilterCondition("Age", QueryOperator.GreaterThan, 10); // Sortkey
+QueryFilterCondition qfc2 = new QueryFilterCondition("Id", QueryOperator.Equal, 1532); // Key / Id
+
+List<Person> personsQueryResult = ddbc.Query<Person>(new List<QueryFilterCondition> { qfc, qfc2 });
 ~~~~~~
 
 ~~~~~~.NET
@@ -183,9 +218,6 @@ Heres just a small list of Insert events stored for Persons table. Stored in new
 ## Roadmap
 
 * Sample CRUD App.
-* Async samples on Readme and in Sample Project.
-* Query support. (Been abit lazy with implementing it).
-* Add support for more datatype (Datetime, Uint and more).
 * Whatever you need :) Just send me a email or message me on Facebook, Linkin or Reddit. (No tweeting bird here :P )
 
 Would love to hear feedback and feature ideas.    

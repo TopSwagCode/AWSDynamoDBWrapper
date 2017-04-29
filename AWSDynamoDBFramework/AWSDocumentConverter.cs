@@ -69,19 +69,52 @@ namespace AWSDynamoDBFramework
                         dynamoDBList.Add(i);
                     }
                     document.Add(entry.Key, dynamoDBList);
-
+                }
+                else if (type == typeof(DateTime))
+                {
+                    document.Add(entry.Key, (DateTime)entry.Value);
                 }
                 else if (type == typeof(float) || type == typeof(float?))
                 {
-                    document.Add(entry.Key, (float?)entry.Value);
+                    if (removeZeros)
+                    {
+                        if ((float)entry.Value != 0)
+                        {
+                            document.Add(entry.Key, (float)entry.Value);
+                        }
+                    }
+                    else
+                    {
+                        document.Add(entry.Key, (float)entry.Value);
+                    }
                 }
                 else if (type == typeof(double) || type == typeof(double?))
                 {
-                    document.Add(entry.Key, (double)entry.Value);
+                    if (removeZeros)
+                    {
+                        if ((double)entry.Value != 0)
+                        {
+                            document.Add(entry.Key, (double)entry.Value);
+                        }
+                    }
+                    else
+                    {
+                        document.Add(entry.Key, (double)entry.Value);
+                    }
                 }
                 else if (type == typeof(uint?) || type == typeof(uint?))
                 {
-                    document.Add(entry.Key, (uint)entry.Value);
+                    if (removeZeros)
+                    {
+                        if ((uint)entry.Value != 0)
+                        {
+                            document.Add(entry.Key, (uint)entry.Value);
+                        }
+                    }
+                    else
+                    {
+                        document.Add(entry.Key, (uint)entry.Value);
+                    }
                 }
                 else if (type.BaseType != null && type.BaseType.IsAssignableFrom(typeof(T)))
                 {
@@ -124,7 +157,6 @@ namespace AWSDynamoDBFramework
 
         private static object ToObjectTest<T>(Document document, string className = "", string classNamespace = "")
         {
-            //var thisType = !string.IsNullOrEmpty(className) ? className : typeof(T).Name;
             var thisNamespace = !string.IsNullOrEmpty(classNamespace) ? classNamespace : typeof(T).Namespace;
 
             var classObject = Activator.CreateInstance(typeof(T));
@@ -135,7 +167,6 @@ namespace AWSDynamoDBFramework
                 var propertyType = classPropertyInfo.PropertyType;
                 classObject = Activator.CreateInstance(propertyType);
             }
-            //string namespacetest = $"{thisNamespace}.{thisType}";
 
             if (document != null)
                 foreach (var entry in document)
@@ -170,11 +201,11 @@ namespace AWSDynamoDBFramework
                             }
                             propertyInfo.SetValue(classObject, integerList);
                         }
-                        else if (propertyInfo.PropertyType == typeof(float))
+                        else if (propertyInfo.PropertyType == typeof(float) || propertyInfo.PropertyType == typeof(float?))
                         {
                             propertyInfo.SetValue(classObject, (float)entry.Value.AsDouble()); // Needs testing.
                         }
-                        else if (propertyInfo.PropertyType == typeof(double))
+                        else if (propertyInfo.PropertyType == typeof(double) || propertyInfo.PropertyType == typeof(double?))
                         {
                             propertyInfo.SetValue(classObject, entry.Value.AsDouble()); // Needs testing.
                         }
@@ -182,17 +213,21 @@ namespace AWSDynamoDBFramework
                         {
                             propertyInfo.SetValue(classObject, entry.Value.AsUInt()); // Needs testing.
                         }
-                        else if (propertyInfo.PropertyType == typeof(long))
+                        else if (propertyInfo.PropertyType == typeof(long) || propertyInfo.PropertyType == typeof(long?))
                         {
                             propertyInfo.SetValue(classObject, entry.Value.AsLong()); // Needs testing.
                         }
-                        else if (propertyInfo.PropertyType == typeof(ulong))
+                        else if (propertyInfo.PropertyType == typeof(ulong) || propertyInfo.PropertyType == typeof(ulong?))
                         {
                             propertyInfo.SetValue(classObject, entry.Value.AsULong()); // Needs testing.
                         }
-                        else if (propertyInfo.PropertyType == typeof(char))
+                        else if (propertyInfo.PropertyType == typeof(char) || propertyInfo.PropertyType == typeof(char?))
                         {
                             propertyInfo.SetValue(classObject, entry.Value.AsChar()); // Needs testing.
+                        }
+                        else if (propertyInfo.PropertyType == typeof(DateTime) || propertyInfo.PropertyType == typeof(DateTime?))
+                        {
+                            propertyInfo.SetValue(classObject, entry.Value.AsDateTime()); // Needs testing.
                         }
                         else
                         {
@@ -204,7 +239,6 @@ namespace AWSDynamoDBFramework
                                 var subType = propertyInfo.PropertyType.GetGenericArguments()[0];
                                 var subClassName = subType.Name;
 
-                                // Reflection way of working with list //
                                 var genericList = typeof(List<>);
                                 var stringList = genericList.MakeGenericType(subType);
                                 var list = Activator.CreateInstance(stringList);
